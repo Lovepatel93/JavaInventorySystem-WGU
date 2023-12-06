@@ -1,0 +1,257 @@
+/**
+ *
+ * @author Love Patel
+ */
+package controller;
+
+import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.fxml.Initializable;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.stage.Stage;
+import model.InHousePart;
+import model.Inventory;
+import model.OutsourcedPart;
+import model.Part;
+
+import java.io.IOException;
+import java.net.URL;
+import java.util.Optional;
+import java.util.ResourceBundle;
+
+/**
+ * This is a controller class that handles the Modify Part screen.
+ */
+public class ModifyPartController implements Initializable {
+
+    Stage stage;
+    Parent scene;
+
+    @FXML
+    private RadioButton outsourcedRBtn;
+
+    @FXML
+    private ToggleGroup inHouseOutsourcedTG;
+
+    @FXML
+    private RadioButton inHouseRBtn;
+
+    @FXML
+    private Label companyLbl;
+
+    @FXML
+    private TextField modifyPartIdTxt;
+
+    @FXML
+    private TextField modifyPartNameTxt;
+
+    @FXML
+    private TextField modifyPartInvTxt;
+
+    @FXML
+    private TextField modifyPartPriceTxt;
+
+    @FXML
+    private TextField modifyPartMaxTxt;
+
+    @FXML
+    private TextField modifyVariableTxt;
+
+    @FXML
+    private TextField modifyPartMinTxt;
+
+    @FXML
+    private Button modifyPartSaveBtn;
+
+    @FXML
+    private Button modifyPartCancelBtn;
+
+    /**
+     * This method handles the cancel button and takes you back to the main screen. It also confirms your action.
+     * @param event Event handling the cancel button.
+     * @throws IOException Exception required for the load method.
+     */
+    @FXML
+    public void onActionDisplayMainScreen(ActionEvent event) throws IOException {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirmation");
+        alert.setHeaderText("Changes are not saved!");
+        alert.setContentText("Would you like to continue without saving?");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.get() == ButtonType.OK) {
+            stage = (Stage) ((Button) event.getSource()).getScene().getWindow();
+            scene = FXMLLoader.load(getClass().getResource("/view/main_screen.fxml"));
+            stage.setScene(new Scene(scene));
+            stage.show();
+        }
+    }
+
+    /**
+     * This Method saves the updated part in the Inventory. It handles data format exceptions and logical errors that
+     * may occur when user enters illogical data when modifying the Part. It gets the Index of the old part and replaces
+     * it with the newly updated part. It also makes sure that some required fields are not left blank or unselected.
+     * @param event Event activates when user clicks on the save button on the Modify Part screen.
+     * @throws IOException Exception required for the load method and also used to display error message when user
+     * enters data of incorrect format in the text fields.
+     *
+     * <p><b>
+     *     Requirement G-1: Description of a Logical error and its Resolution:
+     *
+     *     There was a logical error that was occurring when saving the modified part. After the If condition checks the
+     *     logical errors, Inventory.updatePart method saves it in the correct place. At that time all the ids were
+     *     manually added even in the main method dummy data. They went from 1 to 6. The update part method's first
+     *     parameter is index. The way I defined index was id-1. This caused error when you delete some parts
+     *     in the middle and modify the part whose id is 6. 6-1 will be 5 for the index. This caused out of bounds error
+     *     because there were only 3 or 4 elements in the parts list. So index 5 was never found.
+     * </b></p>
+     *
+     * <p><b>
+     *     The way I resolved this is by creating a counter method that gets numbers starting from one
+     *     than increments them for the next use. This helped to create auto generated ids instead of hardcoding them.
+     *     Also I wrote a method that gets the real index of the selected part in this class and used that to update
+     *     the part.  List.indexof() method was very helpful when coding the method that gets me the
+     *     index of the selected part. This resolved the out of bounds error.
+     *
+     *     The same technique worked for Modify Product class aswell.
+     * </b></p>
+     *
+     * <p><b>
+     *     Requirement G-2: Feature updates for the next version of the app:
+     *
+     *     A good feature would be to dynamically update the Ids based on the previous parts id. For example: If a part
+     *     whose id is 2 is deleted, the part that follows after it should automatically be able to change its id from 3
+     *     to 2. Same goes for all the parts that follows it.
+     *     If the last part in the table whose id is 6 is deleted, when you try to add another part its autogenerated id
+     *     should be 6 instead of 7. This dynamically updating ids of parts and products could be a good feature for the
+     *     next version of the app.
+     * </b></p>
+     *
+     */
+    @FXML
+    public void onActionModifyPartSaveBtn(ActionEvent event) throws IOException {
+        if (inHouseRBtn.isSelected()) {
+            try {
+                int id = Integer.parseInt(modifyPartIdTxt.getText());
+                String name = modifyPartNameTxt.getText();
+                int inv = Integer.parseInt(modifyPartInvTxt.getText());
+                Double price = Double.parseDouble(modifyPartPriceTxt.getText());
+                int max = Integer.parseInt(modifyPartMaxTxt.getText());
+                int min = Integer.parseInt(modifyPartMinTxt.getText());
+                int machineId = Integer.parseInt(modifyVariableTxt.getText());
+
+                if (inv >= min && inv <= max && max > min) {
+                    Inventory.updatePart(getIndex(id), (new InHousePart(id, name, price, inv, min, max, machineId)));
+                    stage = (Stage)((Button)event.getSource()).getScene().getWindow();
+                    scene = FXMLLoader.load(getClass().getResource("/view/main_screen.fxml"));
+                    stage.setScene(new Scene(scene));
+                    stage.show();
+                } else {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Wrong Data ERROR!");
+                    alert.setContentText("Inventory must be between min and max.\nMin must be less than Max.\n");
+                    alert.showAndWait();
+                }
+            } catch (NumberFormatException e) {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Wrong/Missing Data ERROR!");
+                alert.setContentText("Please ensure that all fields have accurate data type. And that they are all filled");
+                alert.showAndWait();
+            }
+
+        } else if (outsourcedRBtn.isSelected()) {
+            try {
+                int id = Integer.parseInt(modifyPartIdTxt.getText());
+                String name = modifyPartNameTxt.getText();
+                int inv = Integer.parseInt(modifyPartInvTxt.getText());
+                Double price = Double.parseDouble(modifyPartPriceTxt.getText());
+                int max = Integer.parseInt(modifyPartMaxTxt.getText());
+                int min = Integer.parseInt(modifyPartMinTxt.getText());
+                String companyName = modifyVariableTxt.getText();
+
+                if (inv >= min && inv <= max && max > min) {
+                    Inventory.updatePart(getIndex(id), (new OutsourcedPart(id, name, price, inv, min, max, companyName)));
+                    stage = (Stage)((Button)event.getSource()).getScene().getWindow();
+                    scene = FXMLLoader.load(getClass().getResource("/view/main_screen.fxml"));
+                    stage.setScene(new Scene(scene));
+                    stage.show();
+                } else {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Wrong Data ERROR!");
+                    alert.setContentText("Inventory must be between min and max.\nMin must be less than Max.\n");
+                    alert.showAndWait();
+                }
+            } catch (NumberFormatException e) {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Wrong Data ERROR!");
+                alert.setContentText("Please ensure that all fields have accurate data type.");
+                alert.showAndWait();
+            }
+        } else {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Part Type not selected!");
+            alert.setContentText("Please select whether the Part you are adding is InHouse or OutSourced.");
+            alert.showAndWait();
+        }
+    }
+
+    /**
+     * This method changes the label on the modify part screen based on the Radio button selected.
+     * @param event Event activates when user selects one of the radio buttons(InHouse or Outsourced)
+     */
+    @FXML
+    public void onActionRadioBtn(ActionEvent event) {
+        if (inHouseRBtn.isSelected()) {
+            companyLbl.setText("Machine ID");
+        }
+        if (outsourcedRBtn.isSelected()) {
+            companyLbl.setText("Company Name");
+        }
+    }
+
+    /**
+     * This method sends old data of the part to the modify part screen.
+     * @param part Selected part that needs to be modified.
+     */
+    public void sendPart(Part part) {
+        modifyPartIdTxt.setText(String.valueOf(part.getPartID()));
+        modifyPartNameTxt.setText(part.getPartName());
+        modifyPartInvTxt.setText(String.valueOf(part.getPartInStock()));
+        modifyPartPriceTxt.setText(String.valueOf(part.getPartPrice()));
+        modifyPartMaxTxt.setText(String.valueOf(part.getMax()));
+        modifyPartMinTxt.setText(String.valueOf(part.getMin()));
+
+        if (part instanceof InHousePart) {
+            //companyLbl.setText("Machine ID");  This line is not needed since Machine ID is the default label.
+            modifyVariableTxt.setText(String.valueOf(((InHousePart) part).getMachineID()));
+            inHouseRBtn.setSelected(true);
+        } else if (part instanceof OutsourcedPart) {
+            companyLbl.setText("Company Name");
+            modifyVariableTxt.setText(((OutsourcedPart) part).getCompanyName());
+            outsourcedRBtn.setSelected(true);
+        }
+    }
+
+    /**
+     * This method gets the Index of the part that user is trying to modify from the Observable list of parts.
+     * @param ID Id of the selected part that needs to be modified.
+     * @return Returns the Index of the selected part that is sent to the modify part screen.
+     */
+    public int getIndex (int ID) {
+        for (Part part : Inventory.getAllParts()) {
+            if (part.getPartID() == ID) {
+                return Inventory.getAllParts().indexOf(part);
+            }
+        }
+        return -1; //It should never come to this.
+    }
+
+    @Override
+    public void initialize(URL url, ResourceBundle resourceBundle) {
+
+    }
+
+}
